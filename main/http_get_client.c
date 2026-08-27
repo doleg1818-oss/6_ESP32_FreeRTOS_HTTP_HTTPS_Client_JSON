@@ -15,6 +15,10 @@
 #include "esp_http_client.h"
 #include "esp_log.h"
 
+#include <string.h>
+#include <string.h>
+
+
 static const char *TAG = "HTTP GET";
 
 static esp_err_t http_event_handler(esp_http_client_event_t *event)
@@ -48,6 +52,15 @@ static esp_err_t http_event_handler(esp_http_client_event_t *event)
 		case HTTP_EVENT_ON_HEADER :
 		{
 			ESP_LOGI(TAG, "Header: %s: %s", event->header_key, event->header_value);
+			
+			if((event->header_key != NULL) && (event->header_value != NULL))
+			{
+				if(strcasecmp(event->header_key, "Content-Type") == 0)
+				{
+					strlcpy(response->content_type, event->header_value, sizeof(response->content_type));
+				}
+			}
+			
 			break;
 		}
 		case HTTP_EVENT_ON_DATA:

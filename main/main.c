@@ -21,6 +21,10 @@
 
 #include "http_get_client.h"
 
+#include "string.h"
+
+#include "server_data_parser.h"
+
 static const char *TAG = "WIFI STA";
 
 static bool wait_for_online(uint32_t timeout_ms) {
@@ -79,10 +83,11 @@ void app_main(void) {
   ESP_LOGI(TAG, "WiFi Online. Starting HTTP GET");
 
   static http_get_response_t response;
+  static server_data_t server_data;
   
   ESP_LOGI(TAG, "app_main response address =%p <<<", (void *)&response); // Print address of structure
 
-  const char *url = "http://192.168.0.240:8000/response.txt.txt";
+  const char *url = "http://192.168.0.240:8000/weather.json";
 
   err = http_get_client_perform(url, &response);
   if (err != ESP_OK) {
@@ -94,10 +99,51 @@ void app_main(void) {
   ESP_LOGI(TAG, "Receivrd body length :%u", (unsigned)response.body_length);
   ESP_LOGI(TAG, "Responce body :%s", response.body);
 
-  // Якщо прийшло даних більше ніж може зберегти в себе буфер
-  if (response.body_truncated) {
-    ESP_LOGI(TAG, "HTTP response was truncated !");
+
+  if(response.status_code != 200)
+  {
+	  ESP_LOGE(TAG, "Unexpected HTTP status, %d", response.status_code);
+	  return;
   }
+  
+  // Якщо прийшло даних більше ніж може зберегти в себе буфер
+  if (response.body_truncated) 
+  {
+	  ESP_LOGI(TAG, "HTTP response was truncated !");
+	  return;
+  }
+  if(strncmp(response.content_type, "application/json", strlen("application/json")) != 0)
+  {
+	  ESP_LOGE(TAG, "Unexpected Content-Type %s", response.content_type);
+	  return;
+  }
+  
+  err = server_data_parse_json(response.body, &server_data);
+  if(err != ESP_OK)
+  {
+	  ESP_LOGE(TAG, "Failed parse JSON");
+	  return;
+  }	
+  
+  
+  ESP_LOGI(TAG, "====================  SERVER DATA  ====================");
+  ESP_LOGI(TAG, "Tempearture %.2f C", server_data.temperature);
+  ESP_LOGI(TAG, "Humidity  %u %%", server_data.humidity);
+  ESP_LOGI(TAG, "Pressure  %u hPa", server_data.pressure);
+  ESP_LOGI(TAG, "Alarm: %s", server_data.alarm ? "Yas" : "No");
+  ESP_LOGI(TAG, "City: %s", server_data.city);
+
+  ESP_LOGI(TAG, "=======================================================");
+
+
+
+
+
+
+
+
+
+
 
   // Wifi tests
   // wifi_manager_start_test_matrix();

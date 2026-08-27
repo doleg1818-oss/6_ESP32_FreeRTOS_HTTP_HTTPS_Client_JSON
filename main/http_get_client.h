@@ -15,12 +15,15 @@
 #include "stdint.h"
 
 #define HTTP_GET_RESPONSE_BODY_SIZE 1024U
+#define HTTP_GET_CONTENT_TYPE_SIZE  64U
 
 typedef struct{
 	int status_code;
 	int64_t content_length;
 	size_t body_length;
 	bool body_truncated;
+	
+	char content_type[HTTP_GET_CONTENT_TYPE_SIZE];
 	char body[HTTP_GET_RESPONSE_BODY_SIZE];
 }http_get_response_t;
 
