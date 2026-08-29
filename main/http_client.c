@@ -16,10 +16,8 @@
 #include "esp_log.h"
 
 #include <string.h>
-#include <string.h>
 
-
-static const char *TAG = "HTTP GET";
+static const char *TAG = "HTTP CLIENT";
 
 static esp_err_t http_event_handler(esp_http_client_event_t *event)
 {
@@ -144,21 +142,21 @@ esp_err_t http_client_get(const char *url, http_response_t *response)
 }
 
 
-esp_err_t http_client_post_json(const char *url, const char *json, http_response_t *responce)
+esp_err_t http_client_post_json(const char *url, const char *json, http_response_t *response)
 {
-	if((url == NULL) || (json == NULL) || (responce == NULL))
+	if((url == NULL) || (json == NULL) || (response == NULL))
 	{
 		return ESP_ERR_INVALID_ARG;
 	}
 	
-	memset(responce, 0, sizeof(*responce));
-	responce->content_length = -1;
+	memset(response, 0, sizeof(*response));
+	response->content_length = -1;
 	
 	esp_http_client_config_t config = {
 		.url = url,
 		.method = HTTP_METHOD_POST,
 		.event_handler = http_event_handler,
-		.user_data = responce,
+		.user_data = response,
 		.timeout_ms = 5000
 	};
 	
@@ -184,6 +182,7 @@ esp_err_t http_client_post_json(const char *url, const char *json, http_response
 	if(err != ESP_OK)
 	{
 		ESP_LOGE(TAG, "Failed to set POST body");
+		esp_http_client_cleanup(client);
 		return err;
 	}
 	
@@ -193,9 +192,9 @@ esp_err_t http_client_post_json(const char *url, const char *json, http_response
 	err = esp_http_client_perform(client);
 	if(err == ESP_OK)
 	{
-		responce->status_code = esp_http_client_get_status_code(client);
-		responce->content_length = esp_http_client_get_content_length(client);
-		ESP_LOGI(TAG, "HTTP status: %d, current_length: %" PRId64, responce->status_code, responce->content_length);
+		response->status_code = esp_http_client_get_status_code(client);
+		response->content_length = esp_http_client_get_content_length(client);
+		ESP_LOGI(TAG, "HTTP status: %d, current_length: %" PRId64, response->status_code, response->content_length);
 	}
 	else
 	{
