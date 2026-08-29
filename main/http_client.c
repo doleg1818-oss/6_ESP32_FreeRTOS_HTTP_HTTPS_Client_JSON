@@ -6,7 +6,7 @@
  */
 
 
-#include "http_get_client.h"
+#include "http_client.h"
 
 #include <inttypes.h>
 #include <sys/errno.h>
@@ -28,7 +28,7 @@ static esp_err_t http_event_handler(esp_http_client_event_t *event)
 		return ESP_ERR_INVALID_ARG;
 	}
 
-	http_get_response_t *response = (http_get_response_t*)event->user_data;
+	http_response_t *response = (http_response_t*)event->user_data;
 	
 	ESP_LOGI(TAG, "http_event_handler response address =%p <<<", event->user_data); // Print address of structure
 
@@ -97,7 +97,7 @@ static esp_err_t http_event_handler(esp_http_client_event_t *event)
 	return ESP_OK;
 }
 
-esp_err_t http_get_client_perform(const char *url, http_get_response_t *response)
+esp_err_t http_client_get(const char *url, http_response_t *response)
 {
 	if((url == NULL) || (response == NULL))
 	{
@@ -112,6 +112,9 @@ esp_err_t http_get_client_perform(const char *url, http_get_response_t *response
 		.timeout_ms = 5000
 	};
 	
+	memset(response, 0, sizeof(*response));
+	response->content_length = -1;
+		
 	ESP_LOGI(TAG, "http_get_client_perform response address =%p <<<", (void *)response); // Print address of structure
 	
 	esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -129,7 +132,7 @@ esp_err_t http_get_client_perform(const char *url, http_get_response_t *response
 		response->status_code = esp_http_client_get_status_code(client);
 		response->content_length = esp_http_client_get_content_length(client); // Скільки байт сервер відправив до клієнта (Корисне навантаження)
 		
-		ESP_LOGI(TAG, "HTTP Status: %d, content length = %" PRIu64, response->status_code, response->content_length);
+		ESP_LOGI(TAG, "HTTP Status: %d, content length = %" PRId64, response->status_code, response->content_length);
 	}
 	else
 	{
@@ -141,8 +144,68 @@ esp_err_t http_get_client_perform(const char *url, http_get_response_t *response
 }
 
 
+esp_err_t http_client_post_json(const char *url, const char *json, http_response_t *responce)
+{
+	if((url == NULL) || (json == NULL) || (responce == NULL))
+	{
+		return ESP_ERR_INVALID_ARG;
+	}
+	
+	memset(responce, 0, sizeof(*responce));
+	responce->content_length = -1;
+	
+	esp_http_client_config_t config = {
+		.url = url,
+		.method = HTTP_METHOD_POST,
+		.event_handler = http_event_handler,
+		.user_data = responce,
+		.timeout_ms = 5000
+	};
+	
+	esp_http_client_handle_t client = esp_http_client_init(&config);
 
-
+	if(client == NULL)
+	{
+		ESP_LOGE(TAG, "Failed ti init HTTP client");
+		return ESP_ERR_NO_MEM;
+	}	
+	
+	// Повідомити серверу про формат request body
+	esp_err_t err = esp_http_client_set_header(client, "Content-Type", "application/json");
+	if(err != ESP_OK)
+	{
+		ESP_LOGE(TAG, "Failed to send Content-type");
+		esp_http_client_cleanup(client);
+		return err;
+	}
+	
+	// Встановити JSON як request body
+	err = esp_http_client_set_post_field(client, json, strlen(json));
+	if(err != ESP_OK)
+	{
+		ESP_LOGE(TAG, "Failed to set POST body");
+		return err;
+	}
+	
+	ESP_LOGI(TAG, "POST URL: %s, ",url);
+	ESP_LOGI(TAG, "POST JSON: %s, ",json);
+	
+	err = esp_http_client_perform(client);
+	if(err == ESP_OK)
+	{
+		responce->status_code = esp_http_client_get_status_code(client);
+		responce->content_length = esp_http_client_get_content_length(client);
+		ESP_LOGI(TAG, "HTTP status: %d, current_length: %" PRId64, responce->status_code, responce->content_length);
+	}
+	else
+	{
+		ESP_LOGE(TAG, "HTTP POST failed: %s", esp_err_to_name(err));
+	}
+	
+	esp_http_client_cleanup(client);
+	
+	return err;
+}
 
 
 

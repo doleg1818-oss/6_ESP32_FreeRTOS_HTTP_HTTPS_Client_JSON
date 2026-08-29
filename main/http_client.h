@@ -5,8 +5,8 @@
  *      Author: Olegd
  */
 
-#ifndef MAIN_HTTP_GET_CLIENT_H_
-#define MAIN_HTTP_GET_CLIENT_H_
+#ifndef MAIN_HTTP_CLIENT_H_
+#define MAIN_HTTP_CLIENT_H_
 
 #include "esp_err.h"
 
@@ -25,8 +25,9 @@ typedef struct{
 	
 	char content_type[HTTP_GET_CONTENT_TYPE_SIZE];
 	char body[HTTP_GET_RESPONSE_BODY_SIZE];
-}http_get_response_t;
+}http_response_t;
 
-esp_err_t http_get_client_perform(const char *urr, http_get_response_t *response);
+esp_err_t http_client_get(const char *urr, http_response_t *response);
+esp_err_t http_client_post_json(const char *url, const char *json, http_response_t *response);
 
-#endif /* MAIN_HTTP_GET_CLIENT_H_ */
+#endif /* MAIN_HTTP_CLIENT_H_ */

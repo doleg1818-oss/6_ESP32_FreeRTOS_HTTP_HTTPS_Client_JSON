@@ -19,11 +19,12 @@
 
 #include "wifi_manager_test.h"
 
-#include "http_get_client.h"
+#include "http_client.h"
 
 #include "string.h"
 
 #include "server_data_parser.h"
+#include "device_data_serializer.h"
 
 static const char *TAG = "WIFI STA";
 
@@ -72,7 +73,6 @@ void app_main(void) {
   ESP_LOGI(TAG, "WiFi STA initialized complited");
 
   //////////////////////////////////////////////////////
-
   if (wait_for_online(30000) == false) {
     ESP_LOGE(TAG, "WiFi did not become ONLINE !");
     return;
@@ -80,66 +80,44 @@ void app_main(void) {
 
   wifi_manager_test_print_status();
 
-  ESP_LOGI(TAG, "WiFi Online. Starting HTTP GET");
+  ESP_LOGI(TAG, "WiFi Online. Starting HTTP POST");
 
-  static http_get_response_t response;
-  static server_data_t server_data;
+  // Emitation device data
+  device_data_t device_data = {
+	  .device_id = 17,
+	  .temperature = 23,
+	  .humidity = 60,
+	  .battery_voltage = 3.91f,
+	  .alarm = false
+  };
   
-  ESP_LOGI(TAG, "app_main response address =%p <<<", (void *)&response); // Print address of structure
-
-  const char *url = "http://192.168.0.240:8000/weather.json";
-
-  err = http_get_client_perform(url, &response);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "HTTP request failed");
-  }
-
-  ESP_LOGI(TAG, "Status code :%d", response.status_code);
-  ESP_LOGI(TAG, "Expected content length :%" PRId64, response.content_length);
-  ESP_LOGI(TAG, "Receivrd body length :%u", (unsigned)response.body_length);
-  ESP_LOGI(TAG, "Responce body :%s", response.body);
-
-
-  if(response.status_code != 200)
-  {
-	  ESP_LOGE(TAG, "Unexpected HTTP status, %d", response.status_code);
-	  return;
-  }
-  
-  // Якщо прийшло даних більше ніж може зберегти в себе буфер
-  if (response.body_truncated) 
-  {
-	  ESP_LOGI(TAG, "HTTP response was truncated !");
-	  return;
-  }
-  if(strncmp(response.content_type, "application/json", strlen("application/json")) != 0)
-  {
-	  ESP_LOGE(TAG, "Unexpected Content-Type %s", response.content_type);
-	  return;
-  }
-  
-  err = server_data_parse_json(response.body, &server_data);
+  char *json = NULL;
+  err = device_data_serialize_json(&device_data, &json);
   if(err != ESP_OK)
   {
-	  ESP_LOGE(TAG, "Failed parse JSON");
+	  ESP_LOGE(TAG, "Failed to serialize data");
 	  return;
-  }	
+  }
+  ESP_LOGI(TAG, "serialize JSON: %s", json);
+  
+  static http_response_t responce;
+  const char *url = "http://192.168.0.240:8000/api/data";
+  
+  err = http_client_post_json(url, json, &responce);
+  
+  device_data_free_json(json);
+  json = NULL;
+  
+  if(err != ESP_OK)
+  {
+	  ESP_LOGE(TAG, "HTTP POST failed");
+	  return;
+  }
   
   
-  ESP_LOGI(TAG, "====================  SERVER DATA  ====================");
-  ESP_LOGI(TAG, "Tempearture %.2f C", server_data.temperature);
-  ESP_LOGI(TAG, "Humidity  %u %%", server_data.humidity);
-  ESP_LOGI(TAG, "Pressure  %u hPa", server_data.pressure);
-  ESP_LOGI(TAG, "Alarm: %s", server_data.alarm ? "Yas" : "No");
-  ESP_LOGI(TAG, "City: %s", server_data.city);
-
-  ESP_LOGI(TAG, "=======================================================");
-
-
-
-
-
-
+  ESP_LOGI(TAG, "HTTP Status :%d", responce.status_code);
+  ESP_LOGI(TAG, "Responce content-type: %s", responce.content_type);
+  ESP_LOGI(TAG, "Responce body: %s", responce.body);
 
 
 
