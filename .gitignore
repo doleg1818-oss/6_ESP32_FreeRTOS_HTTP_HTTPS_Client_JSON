@@ -9,6 +9,9 @@ main/secrets.h
 .project
 .cproject
 
+# LTS private key
+server/*.pem
+
 # OS files
 .DS_Store
 Thumbs.db

@@ -17,6 +17,9 @@
 
 #include <string.h>
 
+extern const uint8_t server_cert_pem_start[]  asm("_binary_server_cert_pem_start");
+extern const uint8_t server_cert_pem_end[]  asm("_binary_server_cert_pem_end");
+
 static const char *TAG = "HTTP CLIENT";
 
 static esp_err_t http_event_handler(esp_http_client_event_t *event)
@@ -205,6 +208,74 @@ esp_err_t http_client_post_json(const char *url, const char *json, http_response
 	
 	return err;
 }
+
+esp_err_t http_client_post_json_https(const char *url, const char *json, http_response_t *response)
+{
+	if((url == NULL) || (json == NULL) || (response == NULL))
+	{
+		return ESP_ERR_INVALID_ARG;
+	}
+	
+	size_t cert_size = server_cert_pem_end - server_cert_pem_start;
+	ESP_LOGI(TAG, "Embedded certeficate address: %p", server_cert_pem_start);
+	ESP_LOGI(TAG, "Embedded certificate size:%u bytes", (unsigned)cert_size);
+	
+	memset(response, 0, sizeof(*response));
+	response->content_length = -1;
+	
+	esp_http_client_config_t config = {
+		.url = url,
+		.method = HTTP_METHOD_POST,
+		.event_handler = http_event_handler,
+		.user_data = response,
+		.timeout_ms = 10000,
+		
+		.cert_pem = (const char*)server_cert_pem_start
+	};
+	
+	esp_http_client_handle_t client = esp_http_client_init(&config);
+	if(client == NULL)
+	{
+		ESP_LOGE(TAG, "Failed to init HTTP client");
+		return ESP_ERR_NO_MEM;
+	}
+	
+	esp_err_t err = esp_http_client_set_header(client, "Content-Type", "application/json");
+	if(err != ESP_OK)
+	{
+		ESP_LOGE(TAG, "Failed to set Content-Type");
+		esp_http_client_cleanup(client);
+		return err;
+	}
+	
+	err = esp_http_client_set_post_field(client, json, strlen(json));
+	if(err != ESP_OK)
+	{
+		ESP_LOGE(TAG, "Failed to set HTTPS POST body");
+		esp_http_client_cleanup(client);
+		return err;		
+	}
+	
+	ESP_LOGI(TAG, "HTTPS POST URL: %s", url);
+	ESP_LOGI(TAG, "HTTPS POST JSON: %s", json);
+	
+	err = esp_http_client_perform(client);
+	if(err == ESP_OK)
+	{
+		response->status_code = esp_http_client_get_status_code(client);
+		response->content_length = esp_http_client_get_content_length(client);
+		ESP_LOGI(TAG, "HTTPS status=%d, content_length=%" PRId64, response->status_code, response->content_length);
+	}
+	else
+	{
+		ESP_LOGE(TAG, "HTTPS POST failed :%s", esp_err_to_name(err));
+	}
+	
+	esp_http_client_cleanup(client);
+	
+	return err;
+}
+
 
 
 

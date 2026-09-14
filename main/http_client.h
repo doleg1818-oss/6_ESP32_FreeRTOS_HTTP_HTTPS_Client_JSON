@@ -29,5 +29,7 @@ typedef struct{
 
 esp_err_t http_client_get(const char *urr, http_response_t *response);
 esp_err_t http_client_post_json(const char *url, const char *json, http_response_t *response);
+esp_err_t http_client_post_json_https(const char *url, const char *json, http_response_t *response);
+
 
 #endif /* MAIN_HTTP_CLIENT_H_ */

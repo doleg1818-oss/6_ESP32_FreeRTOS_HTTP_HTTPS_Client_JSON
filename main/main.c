@@ -101,9 +101,9 @@ void app_main(void) {
   ESP_LOGI(TAG, "serialize JSON: %s", json);
   
   static http_response_t response;
-  const char *url = "http://192.168.0.240:8000/api/data";
   
-  err = http_client_post_json(url, json, &response);
+  const char *url = "https://192.168.0.240:8443/api/data";
+  http_client_post_json_https(url, json, &response);
   
   device_data_free_json(json);
   json = NULL;
@@ -115,12 +115,12 @@ void app_main(void) {
   }
   
   
-  ESP_LOGI(TAG, "HTTP Status :%d", response.status_code);
+  ESP_LOGI(TAG, "HTTPS Status :%d", response.status_code);
   ESP_LOGI(TAG, "Responce content-type: %s", response.content_type);
   ESP_LOGI(TAG, "Responce body: %s", response.body);
 
 
-
+ПЕРЕД ЗАЛИВКОЮ НА ГІТХАБ ЗРОБИТИ ГІТІГНОР СЕКЮР ФАЙЦЛІВ ! !!!!!
 
 
   // Wifi tests
