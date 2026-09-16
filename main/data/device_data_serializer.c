@@ -25,6 +25,11 @@ esp_err_t device_data_serialize_json(const device_data_t *data, char **json_out)
 		return ESP_ERR_NO_MEM;
 	}
 	
+	if(cJSON_AddNumberToObject(root, "message_id", data->message_id) == NULL)
+	{
+		cJSON_Delete(root);
+		return ESP_ERR_NO_MEM;
+	}
 	if(cJSON_AddNumberToObject(root, "device_id", data->device_id) == NULL)
 	{
 		cJSON_Delete(root);

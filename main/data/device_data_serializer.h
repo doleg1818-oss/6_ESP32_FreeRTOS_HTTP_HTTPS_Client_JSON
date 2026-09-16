@@ -5,14 +5,15 @@
  *      Author: Olegd
  */
 
-#ifndef MAIN_DEVICE_DATA_SERIALIZER_H_
-#define MAIN_DEVICE_DATA_SERIALIZER_H_
+#ifndef MAIN_DATA_DEVICE_DATA_SERIALIZER_H_
+#define MAIN_DATA_DEVICE_DATA_SERIALIZER_H_
 
 #include "stdbool.h"
 #include "stdint.h"
 #include "esp_err.h"
 
 typedef struct{
+	uint32_t message_id;
 	uint32_t device_id;
 	float temperature;
 	uint8_t humidity;
@@ -23,4 +24,4 @@ typedef struct{
 esp_err_t device_data_serialize_json(const device_data_t *data, char **json_out);
 void device_data_free_json(char *json);
 
-#endif /* MAIN_DEVICE_DATA_SERIALIZER_H_ */
+#endif /* MAIN_DATA_DEVICE_DATA_SERIALIZER_H_ */

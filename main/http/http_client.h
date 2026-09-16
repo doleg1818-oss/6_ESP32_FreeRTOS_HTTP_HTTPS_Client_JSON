@@ -5,8 +5,8 @@
  *      Author: Olegd
  */
 
-#ifndef MAIN_HTTP_CLIENT_H_
-#define MAIN_HTTP_CLIENT_H_
+#ifndef MAIN_HTTP_HTTP_CLIENT_H_
+#define MAIN_HTTP_HTTP_CLIENT_H_
 
 #include "esp_err.h"
 
@@ -32,4 +32,4 @@ esp_err_t http_client_post_json(const char *url, const char *json, http_response
 esp_err_t http_client_post_json_https(const char *url, const char *json, http_response_t *response);
 
 
-#endif /* MAIN_HTTP_CLIENT_H_ */
+#endif /* MAIN_HTTP_HTTP_CLIENT_H_ */

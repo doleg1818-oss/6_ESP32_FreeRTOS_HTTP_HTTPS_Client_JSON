@@ -1,4 +1,5 @@
-#include "freertos/projdefs.h"
+
+
 #include "inttypes.h"
 #include "stdlib.h"
 #include <stdbool.h>
@@ -13,18 +14,20 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-
-#include "secrets.h"
-#include "wifi_manager.h"
-
-#include "wifi_manager_test.h"
-
-#include "http_client.h"
-
 #include "string.h"
 
-#include "server_data_parser.h"
-#include "device_data_serializer.h"
+#include "../secrets.h"
+#include "../wifi/wifi_manager.h"
+#include "../wifi/wifi_manager_test.h"
+#include "../http/http_client.h"
+#include "../http/http_client_task.h"
+#include "../data/server_data_parser.h"
+#include "../data/device_data_serializer.h"
+
+#include "telemetry_task.h"
+#include "http_result_task.h"
+
+
 
 static const char *TAG = "WIFI STA";
 
@@ -73,54 +76,46 @@ void app_main(void) {
   ESP_LOGI(TAG, "WiFi STA initialized complited");
 
   //////////////////////////////////////////////////////
-  if (wait_for_online(30000) == false) {
-    ESP_LOGE(TAG, "WiFi did not become ONLINE !");
-    return;
-  }
+  	if (wait_for_online(30000) == false)
+  	{
+    	ESP_LOGE(TAG, "WiFi did not become ONLINE !");
+    	return;
+  	}
+  	ESP_LOGI(TAG, "WiFi Online. Starting HTTP POST");
 
-  wifi_manager_test_print_status();
+  	wifi_manager_test_print_status();
+  
+  
+  	// Ініувалізує чергу request і result і таску відправки реквесту
+  	err = http_client_task_init();
+  	if(err != ESP_OK)
+  	{
+	  	ESP_LOGE(TAG, "Failed to initialize HTTP task");
+	  	return;
+  	}
+  
+  	// Ініціалізує і запускає таску яка чекає/приймає результат реквесту від сервера
+	err = http_result_task_start();
+	if(err != ESP_OK)
+	{
+		ESP_LOGE(TAG, "Failed to initialize http_result_task_start task");
+	  	return;
+	}
+  
+  	// Запускає переодичне відсилання реквесту від клієнта до сервера
+	err = telemetry_task_start();
+	if(err != ESP_OK)
+	{
+		ESP_LOGE(TAG, "Failed to initialize telemetry_task_start task");
+	  	return;
+	}
+  
+	ESP_LOGI(TAG, "Aplication initializet complate"); 
 
-  ESP_LOGI(TAG, "WiFi Online. Starting HTTP POST");
-
-  // Emitation device data
-  device_data_t device_data = {
-	  .device_id = 17,
-	  .temperature = 23,
-	  .humidity = 60,
-	  .battery_voltage = 3.91f,
-	  .alarm = false
-  };
   
-  char *json = NULL;
-  err = device_data_serialize_json(&device_data, &json);
-  if(err != ESP_OK)
-  {
-	  ESP_LOGE(TAG, "Failed to serialize data");
-	  return;
-  }
-  ESP_LOGI(TAG, "serialize JSON: %s", json);
+	 
   
-  static http_response_t response;
-  
-  const char *url = "https://192.168.0.240:8443/api/data";
-  http_client_post_json_https(url, json, &response);
-  
-  device_data_free_json(json);
-  json = NULL;
-  
-  if(err != ESP_OK)
-  {
-	  ESP_LOGE(TAG, "HTTP POST failed");
-	  return;
-  }
-  
-  
-  ESP_LOGI(TAG, "HTTPS Status :%d", response.status_code);
-  ESP_LOGI(TAG, "Responce content-type: %s", response.content_type);
-  ESP_LOGI(TAG, "Responce body: %s", response.body);
-
-
-ПЕРЕД ЗАЛИВКОЮ НА ГІТХАБ ЗРОБИТИ ГІТІГНОР СЕКЮР ФАЙЦЛІВ ! !!!!!
+ 
 
 
   // Wifi tests

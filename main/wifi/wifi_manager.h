@@ -5,8 +5,8 @@
  *      Author: Olegd
  */
 
-#ifndef MAIN_WIFI_MANAGER_H_
-#define MAIN_WIFI_MANAGER_H_
+#ifndef MAIN_WIFI_WIFI_MANAGER_H_
+#define MAIN_WIFI_WIFI_MANAGER_H_
 
 #include "stdbool.h"
 #include "stdint.h"
@@ -79,4 +79,4 @@ esp_err_t wifi_manager_get_status(wifi_manager_status_t *status);
 
 
 
-#endif /* MAIN_WIFI_MANAGER_H_ */
+#endif /* MAIN_WIFI_WIFI_MANAGER_H_ */

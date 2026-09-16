@@ -5,8 +5,8 @@
  *      Author: Olegd
  */
 
-#ifndef MAIN_SERVER_DATA_PARSER_H_
-#define MAIN_SERVER_DATA_PARSER_H_
+#ifndef MAIN_DATA_SERVER_DATA_PARSER_H_
+#define MAIN_DATA_SERVER_DATA_PARSER_H_
 
 
 #include <stdbool.h>
@@ -30,4 +30,4 @@ esp_err_t server_data_parse_json(const char *json, server_data_t *data);
 
 
 
-#endif /* MAIN_SERVER_DATA_PARSER_H_ */
+#endif /* MAIN_DATA_SERVER_DATA_PARSER_H_ */
