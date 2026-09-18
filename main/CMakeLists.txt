@@ -8,6 +8,8 @@ idf_component_register(
     	"wifi/wifi_manager_test.c" 
     	"http/http_client.c"
     	"http/http_client_task.c" 
+    	"http/http_manager.h"
+    	"http/http_manager.c"
     	"data/server_data_parser.c"
     	"data/device_data_serializer.c" 
     	"app/telemetry_task.c" 

@@ -35,6 +35,10 @@ typedef struct{
 typedef struct{
 	uint32_t request_id;
 	esp_err_t err;
+	
+	// transport diagnostics
+	http_transport_error_t transport_error;
+	
 	http_response_t response;
 }http_client_result_t;
 

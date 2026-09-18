@@ -133,17 +133,17 @@ void http_client_worker_task(void *arg)
 		{
 			case HTTP_CLIENT_REQUEST_HTTP_GET:
 			{
-				result.err = http_client_get(request.url, &result.response);
+				result.err = http_client_get(request.url, &result.response, &result.transport_error);
 				break;
 			}
 			case HTTP_CLIENT_REQUEST_HTTP_POST_JSON:
 			{
-				result.err = http_client_post_json(request.url, request.json, &result.response);
+				result.err = http_client_post_json(request.url, request.json, &result.response, &result.transport_error);
 				break;
 			}
 			case HTTP_CLIENT_REQUEST_HTTPS_POST_JSON:
 			{
-				result.err = http_client_post_json_https(request.url, request.json, &result.response);
+				result.err = http_client_post_json_https(request.url, request.json, &result.response, &result.transport_error);
 				break;
 			}
 			default:

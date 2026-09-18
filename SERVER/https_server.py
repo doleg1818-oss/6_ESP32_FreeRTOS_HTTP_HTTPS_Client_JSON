@@ -6,6 +6,22 @@ import ssl
 class RequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
+        # TEST: Fault injection: HTTP 500 #################################
+        #if self.path == "/api/error500":
+        #    body = json.dumps({
+        #    "status": "error",
+        #    "message": "intentional test error"
+        #    }).encode("utf-8")
+        #
+        #    self.send_response(500)
+        #    self.send_header("Content-Type", "application/json")
+        #    self.send_header("Content-Length", str(len(body)))
+        #    self.end_headers()
+        #
+        #    self.wfile.write(body)
+        #    return
+        ####################################################################
+
 
         if self.path != "/api/data":
             self.send_response(404)

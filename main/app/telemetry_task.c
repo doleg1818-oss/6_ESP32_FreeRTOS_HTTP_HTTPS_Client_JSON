@@ -17,6 +17,7 @@
 
 #include "../data/device_data_serializer.h"
 #include "../http/http_client_task.h"
+#include "../http/http_manager.h"
 
 #define TELEMETRY_TASK_STACK_SIZE		4096U
 #define TELEMETRY_TASK_PRIOITY			4U
@@ -24,6 +25,8 @@
 #define TELEMETRY_PERIOD_MS				1000U
 
 #define TELEMETRY_URL "https://192.168.0.240:8443/api/data"
+//#define TELEMETRY_URL "https://192.168.0.240:8443/api/error500" // For Fault injection: HTTP 500 
+
 
 static TaskHandle_t telemetry_task_handle = NULL;
 
@@ -73,7 +76,8 @@ static void telemetry_worker_task(void *arg)
 		strlcpy(request.json, json, sizeof(request.json));
 		
 		// Засадмітити передачу до сервера
-	  	err = http_client_task_submit(&request, pdMS_TO_TICKS(100));
+	  	//err = http_client_task_submit(&request, pdMS_TO_TICKS(100));
+	  	err = http_manager_submit(&request, pdMS_TO_TICKS(100));
 	  	
 	  	device_data_free_json(json);
 		json = NULL;

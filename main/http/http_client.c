@@ -16,11 +16,19 @@
 #include "esp_log.h"
 
 #include <string.h>
+#include "esp_tls.h"
 
 extern const uint8_t server_cert_pem_start[]  asm("_binary_server_cert_pem_start");
 extern const uint8_t server_cert_pem_end[]  asm("_binary_server_cert_pem_end");
 
 static const char *TAG = "HTTP CLIENT";
+
+typedef struct{
+	http_response_t *response;
+	http_transport_error_t *transport_error;
+}http_event_context_t;
+
+
 
 static esp_err_t http_event_handler(esp_http_client_event_t *event)
 {
@@ -29,9 +37,17 @@ static esp_err_t http_event_handler(esp_http_client_event_t *event)
 		return ESP_ERR_INVALID_ARG;
 	}
 
-	http_response_t *response = (http_response_t*)event->user_data;
+	http_event_context_t * context = (http_event_context_t*)event->user_data;
 	
-	ESP_LOGI(TAG, "http_event_handler response address =%p <<<", event->user_data); // Print address of structure
+	if((context == NULL) || (context->response == NULL))
+	{
+		return ESP_ERR_INVALID_ARG;
+	}
+	
+	http_response_t *response = context->response;
+
+	
+	//ESP_LOGI(TAG, "http_event_handler response address =%p <<<", event->user_data); // Print address of structure
 
 	switch(event->event_id)
 	{
@@ -90,6 +106,19 @@ static esp_err_t http_event_handler(esp_http_client_event_t *event)
 			break;
 		}
 		
+		case HTTP_EVENT_DISCONNECTED:
+		{
+			ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
+			if((context != NULL) && (context->transport_error != NULL) && (event->data != NULL))
+			{
+				context->transport_error->tls_error = esp_tls_get_and_clear_last_error(
+					(esp_tls_error_handle_t)event->data, &context->transport_error->tls_error_code, &context->transport_error->tls_verify_flags);
+			}
+			
+			break;
+		}
+		
+		
 		default:
 		{
 			break;
@@ -98,18 +127,24 @@ static esp_err_t http_event_handler(esp_http_client_event_t *event)
 	return ESP_OK;
 }
 
-esp_err_t http_client_get(const char *url, http_response_t *response)
+esp_err_t http_client_get(const char *url, http_response_t *response, http_transport_error_t *transport_error)
 {
 	if((url == NULL) || (response == NULL))
 	{
 		return ESP_ERR_INVALID_ARG;
 	}
 	
+	http_event_context_t event_context = 
+	{
+		.response = response,
+		.transport_error = transport_error
+	};
+	
 	esp_http_client_config_t config = {
 		.url = url,
 		.method = HTTP_METHOD_GET,
 		.event_handler = http_event_handler,
-		.user_data = response,
+		.user_data = &event_context,
 		.timeout_ms = 5000
 	};
 	
@@ -145,7 +180,7 @@ esp_err_t http_client_get(const char *url, http_response_t *response)
 }
 
 
-esp_err_t http_client_post_json(const char *url, const char *json, http_response_t *response)
+esp_err_t http_client_post_json(const char *url, const char *json, http_response_t *response, http_transport_error_t *transport_error)
 {
 	if((url == NULL) || (json == NULL) || (response == NULL))
 	{
@@ -155,11 +190,17 @@ esp_err_t http_client_post_json(const char *url, const char *json, http_response
 	memset(response, 0, sizeof(*response));
 	response->content_length = -1;
 	
+	http_event_context_t event_context = 
+	{
+		.response = response,
+		.transport_error = transport_error
+	};
+	
 	esp_http_client_config_t config = {
 		.url = url,
 		.method = HTTP_METHOD_POST,
 		.event_handler = http_event_handler,
-		.user_data = response,
+		.user_data = &event_context,
 		.timeout_ms = 5000
 	};
 	
@@ -193,6 +234,7 @@ esp_err_t http_client_post_json(const char *url, const char *json, http_response
 	ESP_LOGI(TAG, "POST JSON: %s, ",json);
 	
 	err = esp_http_client_perform(client);
+	
 	if(err == ESP_OK)
 	{
 		response->status_code = esp_http_client_get_status_code(client);
@@ -209,11 +251,16 @@ esp_err_t http_client_post_json(const char *url, const char *json, http_response
 	return err;
 }
 
-esp_err_t http_client_post_json_https(const char *url, const char *json, http_response_t *response)
+esp_err_t http_client_post_json_https(const char *url, const char *json, http_response_t *response, http_transport_error_t *transport_error)
 {
 	if((url == NULL) || (json == NULL) || (response == NULL))
 	{
 		return ESP_ERR_INVALID_ARG;
+	}
+	
+	if(transport_error != NULL)
+	{
+		memset(transport_error, 0, sizeof(*transport_error));
 	}
 	
 	size_t cert_size = server_cert_pem_end - server_cert_pem_start;
@@ -223,11 +270,17 @@ esp_err_t http_client_post_json_https(const char *url, const char *json, http_re
 	memset(response, 0, sizeof(*response));
 	response->content_length = -1;
 	
+	http_event_context_t event_context = 
+	{
+		.response = response,
+		.transport_error = transport_error
+	};
+	
 	esp_http_client_config_t config = {
 		.url = url,
 		.method = HTTP_METHOD_POST,
 		.event_handler = http_event_handler,
-		.user_data = response,
+		.user_data = &event_context,
 		.timeout_ms = 10000,
 		
 		.cert_pem = (const char*)server_cert_pem_start
@@ -260,15 +313,21 @@ esp_err_t http_client_post_json_https(const char *url, const char *json, http_re
 	ESP_LOGI(TAG, "HTTPS POST JSON: %s", json);
 	
 	err = esp_http_client_perform(client);
-	if(err == ESP_OK)
+	
+	if(err != ESP_OK)
 	{
-		response->status_code = esp_http_client_get_status_code(client);
-		response->content_length = esp_http_client_get_content_length(client);
-		ESP_LOGI(TAG, "HTTPS status=%d, content_length=%" PRId64, response->status_code, response->content_length);
+		if(transport_error != NULL)
+		{
+			transport_error->socket_errno = esp_http_client_get_errno(client);
+		}
+		ESP_LOGE(TAG, "HTTP POST Failed %s", esp_err_to_name(err));
 	}
 	else
 	{
-		ESP_LOGE(TAG, "HTTPS POST failed :%s", esp_err_to_name(err));
+		response->status_code = esp_http_client_get_status_code(client);
+		response->content_length = esp_http_client_get_content_length(client);
+		
+		ESP_LOGI(TAG, "HTTP status=%d, content_length=%" PRId64 , response->status_code, response->content_length);
 	}
 	
 	esp_http_client_cleanup(client);

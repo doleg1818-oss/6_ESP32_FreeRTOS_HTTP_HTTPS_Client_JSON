@@ -23,6 +23,7 @@
 #include "../http/http_client_task.h"
 #include "../data/server_data_parser.h"
 #include "../data/device_data_serializer.h"
+#include "../http/http_manager.h"
 
 #include "telemetry_task.h"
 #include "http_result_task.h"
@@ -94,6 +95,14 @@ void app_main(void) {
 	  	return;
   	}
   
+  	err = http_manager_init();
+  	if(err != ESP_OK)
+  	{
+	  	ESP_LOGE(TAG, "Failed to initialize HTTP manager");
+	  	return;
+  	}
+  	
+
   	// Ініціалізує і запускає таску яка чекає/приймає результат реквесту від сервера
 	err = http_result_task_start();
 	if(err != ESP_OK)
